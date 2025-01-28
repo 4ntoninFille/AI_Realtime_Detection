@@ -3,6 +3,9 @@ import os
 import pandas as pd
 import numpy as np
 from sklearn.base import clone
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.metrics import confusion_matrix, f1_score, log_loss, matthews_corrcoef, precision_recall_fscore_support, precision_score, recall_score, roc_auc_score
 from sklearn.model_selection import KFold
 
@@ -81,7 +84,35 @@ pathToCsv = os.path.join(data_path, "KAGGLE/DATASET-balanced.csv")
 data = np.loadtxt(pathToCsv, delimiter=',', dtype=dtype, skiprows=1) 
 
 print(data[0])
-X = np.array([(row[0], row[1]) for row in data])
+X = np.stack((
+    data['chroma_stft'],
+    data['rms'],
+    data['spectral_centroid'],
+    data['spectral_bandwidth'],
+    data['rolloff'],
+    data['zero_crossing_rate'],
+    data['mfcc1'],
+    data['mfcc2'],
+    data['mfcc3'],
+    data['mfcc4'],
+    data['mfcc5'],
+    data['mfcc6'],
+    data['mfcc7'],
+    data['mfcc8'],
+    data['mfcc9'],
+    data['mfcc10'],
+    data['mfcc11'],
+    data['mfcc12'],
+    data['mfcc13'],
+    data['mfcc14'],
+    data['mfcc15'],
+    data['mfcc16'],
+    data['mfcc17'],
+    data['mfcc18'],
+    data['mfcc19'],
+    data['mfcc20'],
+), axis=1).astype(float)
+
 y = np.array([row[-1].decode('utf-8') for row in data])
 
 y = np.where(y == "FAKE", 0, 1).astype(int)
@@ -90,8 +121,11 @@ kf = KFold(n_splits=10, shuffle=True, random_state=42)
 
 results = {}
 
-model = xgb.XGBClassifier(tree_method="hist", early_stopping_rounds=2)
+xgb_model = xgb.XGBClassifier(n_estimators=320, tree_method="hist", max_depth=30)
+rf_model = RandomForestClassifier(n_estimators=310, random_state=42, max_depth=50)
 
+xgb_rounds_range = range(10, 501, 10)  # {10, 20, 30, ..., 500}
+rf_trees_range = range(10, 501, 10)
 
 for fold, (train_idx, test_idx) in enumerate(kf.split(X)):
     print(f"Fold {fold + 1}")
@@ -99,11 +133,21 @@ for fold, (train_idx, test_idx) in enumerate(kf.split(X)):
     X_train, X_test = X[train_idx], X[test_idx]
     y_train, y_test = y[train_idx], y[test_idx]
 
-    model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
 
-    predicted = model.predict(X_test)
+    # --- XGBoost ---
+    print("Training XGBoost model...")
+    xgb_model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
+    predicted_xgb = xgb_model.predict(X_test)
+    print("XGBoost Metrics:")
+    calculate_and_display_metrics(y_test, predicted_xgb)
+    
+    print("----------------------")
+    
+    # --- Random Forest ---
+    print("Training Random Forest model...")
+    rf_model.fit(X_train, y_train)
+    predicted_rf = rf_model.predict(X_test)
+    print("Random Forest Metrics:")
+    calculate_and_display_metrics(y_test, predicted_rf)
 
-    calculate_and_display_metrics(y_test, predicted)
     print("---------------------------------------------")
-
-model.save_model("clf.json")
