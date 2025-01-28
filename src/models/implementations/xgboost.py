@@ -30,12 +30,14 @@ class XGBoost(ModelBase):
             self.model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
 
             if fold == 9:
-                predicted = self.predict(X_test)
+                predicted, _ = self.predict(X_test)
                 logger.info("\nXGBoost Metrics:")
                 calculate_and_display_metrics(y_test, predicted)
     
-    def predict(self, X: np.ndarray) -> np.ndarray:
-        return self.model.predict(X)
+    def predict(self, X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        predictions = self.model.predict(X)
+        probabilities = self.model.predict_proba(X)
+        return predictions, probabilities
     
     def save(self, path):
         try:

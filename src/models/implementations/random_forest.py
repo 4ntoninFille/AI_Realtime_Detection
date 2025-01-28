@@ -34,8 +34,10 @@ class RandomForest(ModelBase):
                 logger.info("\nRandomForest Metrics:")
                 calculate_and_display_metrics(y_test, predicted)
     
-    def predict(self, X: np.ndarray) -> np.ndarray:
-        return self.model.predict(X)
+    def predict(self, X: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        predictions = self.model.predict(X)
+        probabilities = self.model.predict_proba(X)
+        return predictions, probabilities
     
     def save(self, path):
         try:
