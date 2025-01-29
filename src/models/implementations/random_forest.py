@@ -30,7 +30,7 @@ class RandomForest(ModelBase):
             self.model.fit(X_train, y_train)
 
             if fold == 9:
-                predicted = self.predict(X_test)
+                predicted, _ = self.predict(X_test)
                 logger.info("\nRandomForest Metrics:")
                 calculate_and_display_metrics(y_test, predicted)
     
